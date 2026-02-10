@@ -2,10 +2,13 @@ from flask import Flask, render_template, request, redirect, send_from_directory
 from werkzeug.utils import secure_filename
 import sqlite3
 import os
+import threading
+import time
+import requests
 
 app = Flask(__name__)
 
-# -------- ABSOLUTE UPLOAD FOLDER (FIXED) --------
+# -------- ABSOLUTE UPLOAD FOLDER --------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -50,6 +53,17 @@ def init_db():
     conn.close()
 
 init_db()
+
+# -------- SELF-PING TO KEEP APP AWAKE --------
+def keep_alive():
+    while True:
+        try:
+            requests.get("https://python-project-xhko.onrender.com")
+        except:
+            pass
+        time.sleep(300)  # every 5 minutes
+
+threading.Thread(target=keep_alive, daemon=True).start()
 
 # -------- HOME PAGE --------
 @app.route("/")
@@ -103,9 +117,8 @@ def upload():
         semester = request.form["semester"]
         file = request.files["file"]
 
-        # secure + validation
         if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
+            filename = secure_filename(file.filename)  # ✅ secure filename
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
             conn = sqlite3.connect('database.db')
@@ -145,7 +158,7 @@ def materials():
 def download(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
 
-# -------- DELETE MATERIAL --------
+# -------- DELETE MATERIAL (SAFE) --------
 @app.route("/delete/<int:id>")
 def delete_material(id):
     conn = sqlite3.connect('database.db')
@@ -154,9 +167,9 @@ def delete_material(id):
     cur.execute("SELECT filename FROM materials WHERE id=?", (id,))
     file = cur.fetchone()
 
-    if file:
+    if file and file[0]:
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], file[0])
-        if os.path.exists(filepath):
+        if os.path.isfile(filepath):  # ✅ only delete actual file
             os.remove(filepath)
 
     cur.execute("DELETE FROM materials WHERE id=?", (id,))
@@ -165,5 +178,6 @@ def delete_material(id):
 
     return redirect("/materials")
 
+# -------- RUN SERVER --------
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
