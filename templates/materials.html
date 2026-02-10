@@ -1,0 +1,33 @@
+<h1>Study Materials</h1>
+
+<h3>Filter</h3>
+<form method="get" action="/materials">
+    Subject: <input type="text" name="subject">
+    Semester: <input type="text" name="semester">
+    <button type="submit">Search</button>
+</form>
+
+<br><br>
+
+<table border="1">
+<tr>
+    <th>Title</th>
+    <th>Subject</th>
+    <th>Semester</th>
+    <th>Download</th>
+    <th>Remove</th>
+</tr>
+
+{% for m in materials %}
+<tr>
+    <td>{{ m[1] }}</td>
+    <td>{{ m[2] }}</td>
+    <td>{{ m[3] }}</td>
+    <td><a href="/download/{{ m[4] }}">Download</a></td>
+    <td><a href="/delete/{{ m[0] }}">Delete</a></td>
+</tr>
+{% endfor %}
+</table>
+
+<br><br>
+<a href="/">Back Home</a>
